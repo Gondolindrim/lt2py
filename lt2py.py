@@ -9,6 +9,8 @@ import easygui as eg
 
 import matplotlib.cm as cm
 
+# Adds the option to specify the target file in the form of a argument, like in
+# python lt2py --plotfile <file destination>
 import argparse
 parser = argparse.ArgumentParser(
 	prog = 'LT2PY API',
@@ -23,18 +25,20 @@ parser.add_argument(	'--plotfile',
 
 args = parser.parse_args()
 file_path = args.plotfile
+# If the plotfile argument was null (no --plotfile argument was passed) execute a GUI to select it
 if file_path == '':
 	# File prompt to ask for the file path
 	file_path = eg.fileopenbox(msg='Select simulation data *.txt file', title='LT2PY file selection', default='', filetypes=["*.txt"], multiple=False)
 
 with open(file_path, 'r', encoding='ISO-8859-1') as f:
 
+	# Reading the first time which contains the curve names
 	line = f.readline().split('\t')
 
 	# For some reason the last element of 'line' comes with a '\n' last element. Removing this '\n' character:
 	line[-1] = line[-1][:-1]
 
-	# This first line contains the names of the signals. signal_names stores their values.
+	# Storing the names of the curves in the signal_names variable
 	signal_names = line
 
 	# If the second line contains the "Step information" string, this means that the file contains a stepped dataset.
@@ -72,13 +76,16 @@ with open(file_path, 'r', encoding='ISO-8859-1') as f:
 			series_data.append(line_temp)
 
 		series_data = np.array(series_data)
+
 if stepped_dataset:
-	print('STEPPED!')
+
+	# Selecting target curves
 	step_choice = eg.multchoicebox('What steps do you want to plot?' , 'LT2PY step selecion', step_info)
 	if step_choice == None:
 		print('No plot steps selected!')
 		raise SystemExit(0)
 
+	# Once the choices are chosen, step_choice_index stores the indexes of the curves chosen relative to the curve data stored either in step_data or series_data
 	step_choice_index = []
 	for x in step_choice:
 		for k in range(len(step_info)):
@@ -87,6 +94,7 @@ if stepped_dataset:
 
 	step_choice_index = [int(x) for x in step_choice_index]
 
+	# Same drill now for choosing target steps
 	curve_choice = eg.multchoicebox('What curves do you want to plot?' , 'LT2PY curve plot selecion', signal_names[1:])
 	if curve_choice == None:
 		print('No plot curves selected!')
@@ -100,12 +108,12 @@ if stepped_dataset:
 
 	curve_choice_index = [int(x) for x in curve_choice_index]
 
+	# What happens in stepped data is that each step has a different time series with different time stamps. So for every step the timestap vector needs to be stored
 	timestamps = []
 	for step in step_data:
 		timestamps.append(np.array([x[0] for x in step]))
 
 	if eg.ynbox('Do you want to plot steps in individual figures?','Please confirm'):     # show a Continue/Cancel dialog
-		print('YES!')
 		fig_list = []
 		ax_list = []
 		for choice in step_choice: 
