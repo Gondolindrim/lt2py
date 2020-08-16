@@ -53,17 +53,19 @@ with open(file_path, 'r', encoding='ISO-8859-1') as f:
 		step_info = []
 
 		for line in f:
+
 			if 'Step Information' in line:
 				# if the line contains "Step Information" then a step timeseries has ended. The temp time series is stored and the temp_series_data variable is cleared
 				step_info.append(line.replace('Step Information: ', '').replace('\n',''))
-				if temp_series_data != []: step_data.append(temp_series_data)
-				temp_series_data = []
-
+				if temp_series_data != []:
+					step_data.append(temp_series_data)
+					temp_series_data = []
 			else:
 				line_temp = [float(x) for x in line.split('\t')]
 				temp_series_data.append(line_temp)
-
-
+	
+		# The last step does not have a following "Step Information" line to trigger the append of temp_series_data into step_data. Hence, when the file ends, this line forcefully appends the last temp_series_data
+		step_data.append(temp_series_data)
 	else: #If the second line does not contain "Step information" then the dataset is not stepped.
 		stepped_dataset = False
 		f.seek(0)
@@ -107,11 +109,12 @@ if stepped_dataset:
 				curve_choice_index.append('{}'.format(k))
 
 	curve_choice_index = [int(x) for x in curve_choice_index]
+	print(curve_choice_index)
 
 	# What happens in stepped data is that each step has a different time series with different time stamps. So for every step the timestap vector needs to be stored
 	timestamps = []
 	for step in step_data:
-		timestamps.append(np.array([x[0] for x in step]))
+		timestamps.append([x[0] for x in step])
 
 	if eg.ynbox('Do you want to plot steps in individual figures?','Please confirm'):     # show a Continue/Cancel dialog
 		fig_list = []
@@ -141,7 +144,7 @@ if stepped_dataset:
 		if len(curve_choice) == 1:
 			colors = [cm.rainbow(x) for x in np.linspace(0, 1, len(step_choice))]
 			for step_choice_number, color_index in zip(step_choice_index, colors):
-				ax1.plot(timestamps[step_choice_number], [x[1] for x in step_data[step_choice_number]],linewidth=1, label=step_info[step_choice_number])
+				ax1.plot(timestamps[step_choice_number], [x[curve_choice_index[0]] for x in step_data[step_choice_number]],linewidth=1, label=step_info[step_choice_number])
 		else:
 			colors = [cm.rainbow(x) for x in np.linspace(0, 1, len(curve_choice))]
 			temp_signal_names = signal_names
@@ -154,7 +157,6 @@ if stepped_dataset:
 		ax1.grid(which='major')
 		ax1.grid(which='minor',dashes=(5,2))
 		ax1.set_xlim([min([min(x) for x in timestamps]),max([max(x) for x in timestamps])])
-
 
 else:
 	choice = eg.multchoicebox('What curves do you want to plot?' , 'LT2PY plot selecion', signal_names[1:])
